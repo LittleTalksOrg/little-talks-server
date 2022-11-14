@@ -15,6 +15,9 @@ if len(os.environ['MSG_TABLE']) > 0 :
 else:
     MSG_TABLE = 'msgs'
 
+LOCATION_PRECISION = 0.005
+    
+
 @app.route('/')
 def hello_world():
     return "<script>window.location.href='https://github.com/LittleTalksOrg/little-talks-server'</script>"
@@ -31,9 +34,9 @@ def insert_msg(form):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-        INSERT INTO {} (nickname, msg, lat, lng) 
-        VALUES ('{}', '{}', {}, {})
-        """.format(MSG_TABLE, form['nickname'],form['msg'],form['lat'],form['lng']))
+        INSERT INTO {} (nickname, msg, lat, lng, ip_address, created_at) 
+        VALUES ('{}', '{}', {}, {}, '{}', strftime('%Y-%m-%d %H-%M-%S','now'))
+        """.format(MSG_TABLE, form['nickname'],form['msg'],form['lat'],form['lng'],request.remote_addr))
         conn.commit()
         conn.close()
     except:
@@ -45,10 +48,10 @@ def get_msgs():
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        min_lat = float(request.form['lat'])-0.05
-        max_lat = float(request.form['lat'])+0.05
-        min_lng = float(request.form['lng'])-0.05
-        max_lng = float(request.form['lng'])+0.05
+        min_lat = float(request.form['lat'])-LOCATION_PRECISION
+        max_lat = float(request.form['lat'])+LOCATION_PRECISION
+        min_lng = float(request.form['lng'])-LOCATION_PRECISION
+        max_lng = float(request.form['lng'])+LOCATION_PRECISION
     except:
         return "invalid latitude '{}' or longitud '{}'".format(request.form['lat'],request.form['lng']) 
     try:
@@ -64,7 +67,6 @@ def get_msgs():
                 ORDER BY id DESC 
                 LIMIT 25
             """.format(MSG_TABLE, min_lat,max_lat,min_lng,max_lng)
-        print(query)
         cursor.execute(query)
 
     except:
@@ -75,7 +77,7 @@ def get_msgs():
 
     returnString = ""
     for linha in cursor.fetchall():
-        returnString = DARKGREEN + linha[1] + " (" + str(linha[3]) + "," + str(linha[4]) + ") said: #" + str(linha[0]) + " " + GREEN + linha[2] + WHITE +"\n" + returnString 
+        returnString = DARKGREEN + "(" + str(linha[5]) + ") " + linha[1] + " said: #" + str(linha[0]) + " " + GREEN + linha[2] + WHITE +"\n" + returnString 
     conn.close()
     return LIGHT_WHITE+"You are at "+request.form['lat']+","+request.form['lng']+" as "+request.form['nickname']+"\n"+WHITE+returnString
 
@@ -90,7 +92,7 @@ def create_database():
             msg TEXT NOT NULL,
             lat REAL NULL,
             lng REAL NULL,
-            created_at DATE NULL,
+            created_at DATETIME NULL,
             ip_address STRING NULL
     );
     """.format(MSG_TABLE))
