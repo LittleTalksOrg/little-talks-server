@@ -17,5 +17,5 @@ We just receive a `POST` request on root and response the last 25 msgs in that l
 ## Execution
 
 ```Shell
-python3 app.py
+flask run
 ```
