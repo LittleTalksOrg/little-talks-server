@@ -10,7 +10,10 @@ LIGHT_WHITE = '\033[1;2m'
 GREEN = '\033[1;32m'
 DARKGREEN = '\033[1;31m'
 
-MSG_TABLE = os.environ['MSG_TABLE']
+if len(os.environ['MSG_TABLE']) > 0 :
+    MSG_TABLE = os.environ['MSG_TABLE']
+else:
+    MSG_TABLE = 'msgs'
 
 @app.route('/')
 def hello_world():
