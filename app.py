@@ -64,12 +64,6 @@ def get_msgs():
         print(query)
         cursor.execute(query)
 
-        """
-        -23.662790, -46.377381
-        -23.610888, -46.431144
-        -23.725744, -46.436928
-        -23.661466, -46.497395
-        """
     except:
         conn.close()
         create_database()
