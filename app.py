@@ -14,7 +14,7 @@ MSG_TABLE = os.environ['MSG_TABLE']
 
 @app.route('/')
 def hello_world():
-    return "Hello, world"
+    return "<script>window.location.href='https://github.com/LittleTalksOrg/little-talks-server'</script>"
 
 @app.route('/', methods=["POST"])
 def send_messages():
