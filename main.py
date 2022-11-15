@@ -7,11 +7,6 @@ LIGHT_WHITE = '\033[1;2m'
 GREEN = '\033[1;32m'
 DARKGREEN = '\033[1;31m'
 
-if len(os.environ['MSG_TABLE']) > 0 :
-    MSG_TABLE = os.environ['MSG_TABLE']
-else:
-    MSG_TABLE = 'msgs'
-
 LOCATION_PRECISION = 0.005
 
 def send_messages():
@@ -27,10 +22,7 @@ def insert_msg(form):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
-        INSERT INTO {} (nickname, msg, lat, lng, ip_address, created_at) 
-        VALUES ('{}', '{}', {}, {}, '{}', strftime('%Y-%m-%d %H-%M-%S','now'))
-        """.format(MSG_TABLE, form['nickname'],form['msg'],form['lat'],form['lng'],request.remote_addr))
+        cursor.execute(get_insert_msg_query().format(os.environ['MSG_TABLE'], form['nickname'],form['msg'],form['lat'],form['lng'],request.remote_addr))
         conn.commit()
         conn.close()
     except:
@@ -60,44 +52,78 @@ def get_msgs():
                     AND lng <= {} 
                 ORDER BY id DESC 
                 LIMIT 25
-            """.format(MSG_TABLE, min_lat,max_lat,min_lng,max_lng)
+            """.format(os.environ['MSG_TABLE'], min_lat,max_lat,min_lng,max_lng)
         cursor.execute(query)
-
     except:
         conn.close()
         create_database()
         return get_msgs()
 
-
     returnString = ""
-    for linha in cursor.fetchall():
+    test = cursor.fetchall()
+    for linha in test:
         returnString = DARKGREEN + "(" + str(linha[5]) + ") " + linha[1] + " said: #" + str(linha[0]) + " " + GREEN + linha[2] + WHITE +"\n" + returnString 
     conn.close()
     return LIGHT_WHITE+"You are at "+request.form['lat']+","+request.form['lng']+" as "+request.form['nickname']+"\n"+WHITE+returnString
+
+def get_db_conn():
+    if os.environ['DB'] =='psql':
+        import psycopg2
+        PS_DATABASE = os.environ['PS_DATABASE']
+        PS_USER = os.environ['PS_USER']
+        PS_PASSWORD = os.environ['PS_PASSWORD']
+        PS_HOST = os.environ['PS_HOST']
+        PS_PORT = os.environ['PS_PORT']
+        
+        return psycopg2.connect(database = PS_DATABASE, user = PS_USER, password = PS_PASSWORD, host = PS_HOST, port = PS_PORT)
+    else:
+        import sqlite3
+        return sqlite3.connect('msgs.db')
 
 def create_database():
     conn = get_db_conn()
     cursor = conn.cursor() 
     # criando a tabela (schema)
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS {} (
-            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            nickname TEXT NOT NULL,
-            msg TEXT NOT NULL,
-            lat REAL NULL,
-            lng REAL NULL,
-            created_at DATETIME NULL,
-            ip_address STRING NULL
-    );
-    """.format(MSG_TABLE))
+    cursor.execute(get_create_table_msg_query(os.environ['DB']))
+    conn.commit()
     conn.close()
     print('Tabela criada com sucesso.')
     return 'ok'
 
-def get_db_conn():
-    import sqlite3
+def get_insert_msg_query():
+    if os.environ['DB'] =='psql':
+        return """
+        INSERT INTO {} (nickname, msg, lat, lng, ip_address, created_at) 
+        VALUES ('{}', '{}', {}, {}, '{}', NOW())
+        """
+    else: #sqlite
+        return """
+        INSERT INTO {} (nickname, msg, lat, lng, ip_address, created_at) 
+        VALUES ('{}', '{}', {}, {}, '{}', strftime('%Y-%m-%d %H-%M-%S','now'))
+        """
 
-    # conectando...
-    conn = sqlite3.connect('msgs.db')
-    # definindo um cursor
-    return conn
+def get_create_table_msg_query():
+    if os.environ['DB'] =='psql':
+        return """
+                CREATE TABLE IF NOT EXISTS {} (
+                        id  SERIAL,
+                        nickname TEXT NOT NULL,
+                        msg TEXT NOT NULL,
+                        lat REAL NULL,
+                        lng REAL NULL,
+                        created_at TIMESTAMP NULL,
+                        ip_address TEXT NULL
+                );
+                """.format(os.environ['MSG_TABLE'])
+    else: #sqlite
+        return """
+                CREATE TABLE IF NOT EXISTS {} (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        nickname TEXT NOT NULL,
+                        msg TEXT NOT NULL,
+                        lat REAL NULL,
+                        lng REAL NULL,
+                        created_at DATETIME NULL,
+                        ip_address TEXT NULL
+                );
+                """.format(os.environ['MSG_TABLE'])
