@@ -1,36 +1,34 @@
-from flask import request
 import os
 
-
-WHITE = '\033[1;0m'
-LIGHT_WHITE = '\033[1;2m'
-GREEN = '\033[1;32m'
-DARKGREEN = '\033[1;31m'
-
-LOCATION_PRECISION = 0.005
-
-def send_messages():
+def send_messages(request):
     if request.method == 'GET':
         return "<script>window.location.href='https://github.com/LittleTalksOrg/little-talks-server'</script>"
     else:
         if request.form['msg']!='':
-            insert_msg(request.form)
+            insert_msg(request)
         
-        return get_msgs()
+        return get_msgs(request)
 
-def insert_msg(form):
+def insert_msg(request):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        cursor.execute(get_insert_msg_query().format(os.environ['MSG_TABLE'], form['nickname'],form['msg'],form['lat'],form['lng'],request.remote_addr))
+        cursor.execute(get_insert_msg_query().format(os.environ['MSG_TABLE'], request.form['nickname'],request.form['msg'],request.form['lat'],request.form['lng'],request.remote_addr))
         conn.commit()
         conn.close()
     except:
         create_database()
-        insert_msg(form)
+        insert_msg(request)
     conn.close()
 
-def get_msgs():
+def get_msgs(request):
+
+    LOCATION_PRECISION = 0.005
+    WHITE = '\033[1;0m'
+    LIGHT_WHITE = '\033[1;2m'
+    GREEN = '\033[1;32m'
+    DARKGREEN = '\033[1;31m'
+
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -57,7 +55,7 @@ def get_msgs():
     except:
         conn.close()
         create_database()
-        return get_msgs()
+        return get_msgs(request)
 
     returnString = ""
     test = cursor.fetchall()
@@ -84,7 +82,7 @@ def create_database():
     conn = get_db_conn()
     cursor = conn.cursor() 
     # criando a tabela (schema)
-    cursor.execute(get_create_table_msg_query(os.environ['DB']))
+    cursor.execute(get_create_table_msg_query())
     conn.commit()
     conn.close()
     print('Tabela criada com sucesso.')
